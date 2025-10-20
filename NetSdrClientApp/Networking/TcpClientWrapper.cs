@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,13 +10,16 @@ using System.Threading.Tasks;
 
 namespace NetSdrClientApp.Networking
 {
-    public class TcpClientWrapper : ITcpClient
+    // ЗМІНЕНО: Додано реалізацію IDisposable
+    public class TcpClientWrapper : ITcpClient, IDisposable
     {
-        private string _host;
-        private int _port;
+        // ЗМІНЕНО: Поля зроблені readonly
+        private readonly string _host;
+        private readonly int _port;
         private TcpClient? _tcpClient;
         private NetworkStream? _stream;
-        private CancellationTokenSource _cts;
+        // ЗМІНЕНО: _cts тепер nullable
+        private CancellationTokenSource? _cts;
 
         public bool Connected => _tcpClient != null && _tcpClient.Connected && _stream != null;
 
@@ -36,10 +39,9 @@ namespace NetSdrClientApp.Networking
                 return;
             }
 
-            _tcpClient = new TcpClient();
-
             try
             {
+                _tcpClient = new TcpClient();
                 _cts = new CancellationTokenSource();
                 _tcpClient.Connect(_host, _port);
                 _stream = _tcpClient.GetStream();
@@ -49,6 +51,7 @@ namespace NetSdrClientApp.Networking
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to connect: {ex.Message}");
+                Dispose(); // Важливо очистити ресурси при невдалому підключенні
             }
         }
 
@@ -56,13 +59,9 @@ namespace NetSdrClientApp.Networking
         {
             if (Connected)
             {
-                _cts?.Cancel();
-                _stream?.Close();
-                _tcpClient?.Close();
-
-                _cts = null;
-                _tcpClient = null;
-                _stream = null;
+                Console.WriteLine("Disconnecting...");
+                _cts?.Cancel(); // Сигнал для зупинки циклу прослуховування
+                Dispose();      // Очищення всіх ресурсів
                 Console.WriteLine("Disconnected.");
             }
             else
@@ -70,13 +69,25 @@ namespace NetSdrClientApp.Networking
                 Console.WriteLine("No active connection to disconnect.");
             }
         }
+        
+        // НОВИЙ МЕТОД: Реалізація IDisposable для очищення ресурсів
+        public void Dispose()
+        {
+            _stream?.Dispose();
+            _tcpClient?.Dispose();
+            _cts?.Dispose();
+            _stream = null;
+            _tcpClient = null;
+            _cts = null;
+        }
 
         public async Task SendMessageAsync(byte[] data)
         {
-            if (Connected && _stream != null && _stream.CanWrite)
+            if (Connected && _stream != null && _stream.CanWrite && _cts != null)
             {
                 Console.WriteLine($"Message sent: " + data.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
-                await _stream.WriteAsync(data, 0, data.Length);
+                // ЗМІНЕНО: Використовуємо сучасний overload
+                await _stream.WriteAsync(data, _cts.Token);
             }
             else
             {
@@ -87,39 +98,41 @@ namespace NetSdrClientApp.Networking
         public async Task SendMessageAsync(string str)
         {
             var data = Encoding.UTF8.GetBytes(str);
-            if (Connected && _stream != null && _stream.CanWrite)
-            {
-                Console.WriteLine($"Message sent: " + data.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
-                await _stream.WriteAsync(data, 0, data.Length);
-            }
-            else
-            {
-                throw new InvalidOperationException("Not connected to a server.");
-            }
+            // Викликаємо перевантажений метод, щоб уникнути дублювання коду
+            await SendMessageAsync(data);
         }
 
         private async Task StartListeningAsync()
         {
-            if (Connected && _stream != null && _stream.CanRead)
+            if (Connected && _stream != null && _stream.CanRead && _cts != null)
             {
                 try
                 {
-                    Console.WriteLine($"Starting listening for incomming messages.");
+                    Console.WriteLine($"Starting listening for incoming messages.");
+                    byte[] buffer = new byte[8194];
 
                     while (!_cts.Token.IsCancellationRequested)
                     {
-                        byte[] buffer = new byte[8194];
-
-                        int bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, _cts.Token);
+                        int bytesRead = await _stream.ReadAsync(buffer, _cts.Token);
                         if (bytesRead > 0)
                         {
                             MessageReceived?.Invoke(this, buffer.AsSpan(0, bytesRead).ToArray());
                         }
+                        else
+                        {
+                            // З'єднання було закрито з іншого боку
+                            break; 
+                        }
                     }
                 }
-                catch (OperationCanceledException ex)
+                // ЗМІНЕНО: Прибрано невикористану змінну 'ex'
+                catch (OperationCanceledException)
                 {
-                    //empty
+                    // Це очікуваний виняток при Disconnect
+                }
+                catch (IOException)
+                {
+                    // Це очікуваний виняток, якщо з'єднання розірвано
                 }
                 catch (Exception ex)
                 {
@@ -128,6 +141,8 @@ namespace NetSdrClientApp.Networking
                 finally
                 {
                     Console.WriteLine("Listener stopped.");
+                    // Автоматично відключаємось, якщо цикл прослуховування завершився
+                    Disconnect();
                 }
             }
             else
@@ -136,5 +151,4 @@ namespace NetSdrClientApp.Networking
             }
         }
     }
-
 }
