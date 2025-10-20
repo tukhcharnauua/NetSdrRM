@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 using static NetSdrClientApp.Messages.NetSdrMessageHelper;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace NetSdrClientApp
+namespace NetSdrClientApp.Networking
 {
-    public class NetSdrClient
+    public interface IUdpClient
     {
         private ITcpClient _tcpClient;
         private IUdpClient _udpClient;
