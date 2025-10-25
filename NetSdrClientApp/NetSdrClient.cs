@@ -1,4 +1,4 @@
-﻿using NetSdrClientApp.Messages;
+using NetSdrClientApp.Messages;
 using NetSdrClientApp.Networking;
 using System;
 using System.Collections.Generic;
@@ -8,15 +8,23 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using static NetSdrClientApp.Messages.NetSdrMessageHelper;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+
+// Видалено 'using static System.Runtime.InteropServices.JavaScript.JSType;'
+// оскільки це не використовується і може викликати проблеми залежно від платформи.
 
 namespace NetSdrClientApp
 {
     public class NetSdrClient
     {
+        // Рішення S2933: Поля readonly
         private readonly ITcpClient _tcpClient;
         private readonly IUdpClient _udpClient;
+        
         public bool IQStarted { get; set; }
+
+        // Рішення CS8618: Поле зроблене nullable (додано '?'),
+        // оскільки воно ініціалізується лише в SendTcpRequest, а не в конструкторі.
+        private TaskCompletionSource<byte[]>? responseTaskSource; 
 
         public NetSdrClient(ITcpClient tcpClient, IUdpClient udpClient)
         {
@@ -65,7 +73,8 @@ namespace NetSdrClientApp
                 return;
             }
 
-;           var iqDataMode = (byte)0x80;
+            // Видалено зайву крапку з комою
+            var iqDataMode = (byte)0x80;
             var start = (byte)0x02;
             var fifo16bitCaptureMode = (byte)0x01;
             var n = (byte)1;
@@ -120,6 +129,7 @@ namespace NetSdrClientApp
 
             Console.WriteLine($"Samples recieved: " + body.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
 
+            // Припускаючи, що FileStream та BinaryWriter доступні (наприклад, це консольний або десктопний додаток)
             using (FileStream fs = new FileStream("samples.bin", FileMode.Append, FileAccess.Write, FileShare.Read))
             using (BinaryWriter sw = new BinaryWriter(fs))
             {
@@ -129,8 +139,6 @@ namespace NetSdrClientApp
                 }
             }
         }
-
-        private TaskCompletionSource<byte[]> responseTaskSource;
 
         private async Task<byte[]> SendTcpRequest(byte[] msg)
         {
