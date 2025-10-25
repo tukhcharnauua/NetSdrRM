@@ -14,19 +14,20 @@ namespace NetSdrClientApp
 {
     public class NetSdrClient
     {
-        private readonly ITcpClient _tcpClient;
-        private readonly IUdpClient _udpClient;
-        public bool IQStarted { get; set; }
+    private readonly ITcpClient _tcpClient;
+    private readonly IUdpClient _udpClient;
+    public bool IQStarted { get; set; }
 
-        public NetSdrClient(ITcpClient tcpClient, IUdpClient udpClient)
-        {
-            _tcpClient = tcpClient;
-            _udpClient = udpClient;
+    private TaskCompletionSource<byte[]>? responseTaskSource;
+    public NetSdrClient(ITcpClient tcpClient, IUdpClient udpClient)
+    {
+        _tcpClient = tcpClient;
+        _udpClient = udpClient;
 
-            _tcpClient.MessageReceived += _tcpClient_MessageReceived;
-            _udpClient.MessageReceived += _udpClient_MessageReceived;
-        }
-
+        _tcpClient.MessageReceived += _tcpClient_MessageReceived;
+        _udpClient.MessageReceived += _udpClient_MessageReceived;
+        
+    }
         public async Task ConnectAsync()
         {
             if (!_tcpClient.Connected)
