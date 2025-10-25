@@ -9,9 +9,6 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using static NetSdrClientApp.Messages.NetSdrMessageHelper;
 
-// Видалено 'using static System.Runtime.InteropServices.JavaScript.JSType;'
-// оскільки це не використовується і може викликати проблеми залежно від платформи.
-
 namespace NetSdrClientApp
 {
     public class NetSdrClient
@@ -73,7 +70,6 @@ namespace NetSdrClientApp
                 return;
             }
 
-            // Видалено зайву крапку з комою
             var iqDataMode = (byte)0x80;
             var start = (byte)0x02;
             var fifo16bitCaptureMode = (byte)0x01;
@@ -124,7 +120,8 @@ namespace NetSdrClientApp
 
         private void _udpClient_MessageReceived(object? sender, byte[] e)
         {
-            NetSdrMessageHelper.TranslateMessage(e, out MsgTypes type, out ControlItemCodes code, out ushort sequenceNum, out byte[] body);
+            // Рішення S1481: Замінено невикористані out параметри (type, code, sequenceNum) на discard (_).
+            NetSdrMessageHelper.TranslateMessage(e, out _, out _, out _, out byte[] body);
             var samples = NetSdrMessageHelper.GetSamples(16, body);
 
             Console.WriteLine($"Samples recieved: " + body.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
