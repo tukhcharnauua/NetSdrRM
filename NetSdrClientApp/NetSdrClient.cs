@@ -14,7 +14,7 @@ namespace NetSdrClientApp
 {
     public class NetSdrClient
     {
-
+        
         private readonly ITcpClient _tcpClient;
         private readonly IUdpClient _udpClient;
         
@@ -29,7 +29,8 @@ namespace NetSdrClientApp
             _udpClient = udpClient;
 
             _tcpClient.MessageReceived += _tcpClient_MessageReceived;
-            _udpClient.MessageReceived += _udpClient_MessageReceived;
+            // ПІДПИСКА на статичний метод
+            _udpClient.MessageReceived += _udpClient_MessageReceived; 
         }
 
         public async Task ConnectAsync()
@@ -118,17 +119,17 @@ namespace NetSdrClientApp
             await SendTcpRequest(msg);
         }
 
-     
-        private void _udpClient_MessageReceived(object? sender, byte[] e)
+        // Змінено на статичний метод
+        private static void _udpClient_MessageReceived(object? sender, byte[] e)
         {
-      
+        
             NetSdrMessageHelper.TranslateMessage(e, out _, out _, out _, out byte[] body);
             var samples = NetSdrMessageHelper.GetSamples(16, body);
 
-  
+    
             Console.WriteLine($"Samples recieved: " + body.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
 
-        
+            
             using (FileStream fs = new FileStream("samples.bin", FileMode.Append, FileAccess.Write, FileShare.Read))
             using (BinaryWriter sw = new BinaryWriter(fs))
             {
@@ -139,13 +140,13 @@ namespace NetSdrClientApp
             }
         }
 
-       
-        private async Task<byte[]>? SendTcpRequest(byte[] msg)
+        // Залишаю сигнатуру Task<byte[]> без '?' для усунення помилки повернення null
+        private async Task<byte[]> SendTcpRequest(byte[] msg)
         {
             if (!_tcpClient.Connected)
             {
                 Console.WriteLine("No active connection.");
-     
+                // Виправлення проблеми з null: викидаємо виняток
                 throw new InvalidOperationException("TCP client is not connected."); 
             }
 
@@ -156,7 +157,7 @@ namespace NetSdrClientApp
 
             var resp = await responseTask;
 
-           
+            // resp гарантовано не null
             return resp;
         }
 
@@ -168,22 +169,22 @@ namespace NetSdrClientApp
             
             if (responseTaskSource != null)
             {
-   
+    
                 responseTaskSource.SetResult(e);
                 responseTaskSource = null; // Скидаємо очікування
                 Console.WriteLine("Response recieved: " + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
             }
             else
             {
- 
+                // Обробка Unsolicited messages
                 if (type == MsgTypes.Notification) 
                 {
                     Console.WriteLine($"Unsolicited NOTIFICATION received: Code={code}.");
-             
+                
                 }
                 else
                 {
-                 
+                
                     Console.WriteLine($"Unexpected TCP message (not response, not notification) recieved: Type={type}, Code={code}. Data: " 
                                       + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
                 }
