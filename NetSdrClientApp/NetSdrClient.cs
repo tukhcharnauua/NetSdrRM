@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using static NetSdrClientApp.Messages.NetSdrMessageHelper;
+using System.IO; // Додано для FileStream та BinaryWriter
 
 namespace NetSdrClientApp
 {
@@ -21,6 +22,7 @@ namespace NetSdrClientApp
 
         // Рішення CS8618: Поле зроблене nullable (додано '?'),
         // оскільки воно ініціалізується лише в SendTcpRequest, а не в конструкторі.
+        // Зверніть увагу: ми залишаємо його nullable, щоб полегшити скидання після отримання відповіді.
         private TaskCompletionSource<byte[]>? responseTaskSource; 
 
         public NetSdrClient(ITcpClient tcpClient, IUdpClient udpClient)
@@ -118,15 +120,18 @@ namespace NetSdrClientApp
             await SendTcpRequest(msg);
         }
 
+        // Залишаємо метод екземпляра
         private void _udpClient_MessageReceived(object? sender, byte[] e)
         {
             // Рішення S1481: Замінено невикористані out параметри (type, code, sequenceNum) на discard (_).
             NetSdrMessageHelper.TranslateMessage(e, out _, out _, out _, out byte[] body);
             var samples = NetSdrMessageHelper.GetSamples(16, body);
 
+            // Цей Console.WriteLine може уповільнювати прийом UDP пакетів!
             Console.WriteLine($"Samples recieved: " + body.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
 
             // Припускаючи, що FileStream та BinaryWriter доступні (наприклад, це консольний або десктопний додаток)
+            // Додано перевірку на наявність System.IO для коректної компіляції
             using (FileStream fs = new FileStream("samples.bin", FileMode.Append, FileAccess.Write, FileShare.Read))
             using (BinaryWriter sw = new BinaryWriter(fs))
             {
@@ -137,12 +142,14 @@ namespace NetSdrClientApp
             }
         }
 
+        // Виправлено: метод тепер викидає виняток замість повернення null.
         private async Task<byte[]> SendTcpRequest(byte[] msg)
         {
             if (!_tcpClient.Connected)
             {
                 Console.WriteLine("No active connection.");
-                return null;
+                // Виправлення помилки "Possible null reference return."
+                throw new InvalidOperationException("TCP client is not connected."); 
             }
 
             responseTaskSource = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -152,18 +159,39 @@ namespace NetSdrClientApp
 
             var resp = await responseTask;
 
+            // resp тепер гарантовано не null, якщо TaskCompletionSource успішно завершився
             return resp;
         }
 
         private void _tcpClient_MessageReceived(object? sender, byte[] e)
         {
-            //TODO: add Unsolicited messages handling here
+            // Виправлення TODO: add Unsolicited messages handling here
+            // Спочатку перекладаємо повідомлення, щоб визначити його тип
+            NetSdrMessageHelper.TranslateMessage(e, out MsgTypes type, out ControlItemCodes code, out _, out _);
+            
             if (responseTaskSource != null)
             {
+                // Припускаємо, що будь-яке повідомлення, отримане під час очікування, є відповіддю
                 responseTaskSource.SetResult(e);
-                responseTaskSource = null;
+                responseTaskSource = null; // Скидаємо очікування
+                Console.WriteLine("Response recieved: " + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
             }
-            Console.WriteLine("Response recieved: " + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+            else
+            {
+                // Логіка для обробки Unsolicited messages (небажаних повідомлень)
+                // Наприклад, якщо MsgTypes.Notification є небажаним типом
+                if (type == MsgTypes.Notification) 
+                {
+                    Console.WriteLine($"Unsolicited NOTIFICATION received: Code={code}.");
+                    // Тут може бути додаткова логіка обробки цього типу повідомлення
+                }
+                else
+                {
+                    // Логування інших несподіваних повідомлень
+                    Console.WriteLine($"Unexpected TCP message (not response, not notification) recieved: Type={type}, Code={code}. Data: " 
+                                      + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+                }
+            }
         }
     }
 }
