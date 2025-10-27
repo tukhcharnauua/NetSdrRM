@@ -132,12 +132,13 @@ namespace NetSdrClientApp
             {
                 foreach (var sample in samples)
                 {
-                    sw.Write((short)sample); //write 16 bit per sample as configured 
+                    sw.Write((short)sample);
                 }
             }
         }
 
-        private async Task<byte[]> SendTcpRequest(byte[] msg)
+        // Нове виправлення: Тип повернення змінено на Task<byte[]?> (nullable)
+        private async Task<byte[]?> SendTcpRequest(byte[] msg)
         {
             if (!_tcpClient.Connected)
             {
@@ -152,7 +153,7 @@ namespace NetSdrClientApp
 
             var resp = await responseTask;
 
-            return resp;
+            return resp; 
         }
 
         private void _tcpClient_MessageReceived(object? sender, byte[] e)
