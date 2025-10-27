@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-namespace NetSdrClientApp.Networking
+namespace NetSdrClientApp.Networking;
 {
    
     public interface IUdpClient
