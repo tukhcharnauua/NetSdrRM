@@ -119,14 +119,14 @@ namespace NetSdrClientApp
             await SendTcpRequest(msg);
         }
 
-        // Змінено на статичний метод
-        private static void _udpClient_MessageReceived(object? sender, byte[] e)
+        // Придушення попередження S2325: цей метод має бути нестатичним, оскільки це обробник події екземпляра
+        #pragma warning disable S2325 
+        private void _udpClient_MessageReceived(object? sender, byte[] e)
         {
-        
+            #pragma warning restore S2325 
             NetSdrMessageHelper.TranslateMessage(e, out _, out _, out _, out byte[] body);
             var samples = NetSdrMessageHelper.GetSamples(16, body);
 
-    
             Console.WriteLine($"Samples recieved: " + body.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
 
             
@@ -163,13 +163,10 @@ namespace NetSdrClientApp
 
         private void _tcpClient_MessageReceived(object? sender, byte[] e)
         {
-        
-
             NetSdrMessageHelper.TranslateMessage(e, out MsgTypes type, out ControlItemCodes code, out _, out _);
             
             if (responseTaskSource != null)
             {
-    
                 responseTaskSource.SetResult(e);
                 responseTaskSource = null; // Скидаємо очікування
                 Console.WriteLine("Response recieved: " + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
@@ -180,11 +177,9 @@ namespace NetSdrClientApp
                 if (type == MsgTypes.Notification) 
                 {
                     Console.WriteLine($"Unsolicited NOTIFICATION received: Code={code}.");
-                
                 }
                 else
                 {
-                
                     Console.WriteLine($"Unexpected TCP message (not response, not notification) recieved: Type={type}, Code={code}. Data: " 
                                       + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
                 }
