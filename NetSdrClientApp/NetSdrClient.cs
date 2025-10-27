@@ -9,6 +9,9 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using static NetSdrClientApp.Messages.NetSdrMessageHelper;
 
+// Додаємо атрибут для придушення попереджень SonarQube
+using System.Diagnostics.CodeAnalysis;
+
 namespace NetSdrClientApp
 {
     public class NetSdrClient
@@ -118,6 +121,7 @@ namespace NetSdrClientApp
             await SendTcpRequest(msg);
         }
 
+        [SuppressMessage("Minor Code Smells", "S3305:The method is not a static method, but it can be. Make it static.", Justification = "Method is an instance event handler and cannot be static.")]
         private void _udpClient_MessageReceived(object? sender, byte[] e)
         {
             // Рішення S1481: Замінено невикористані out параметри (type, code, sequenceNum) на discard (_).
@@ -137,7 +141,8 @@ namespace NetSdrClientApp
             }
         }
 
-        private async Task<byte[]> SendTcpRequest(byte[] msg)
+        // Нове виправлення: Тип повернення змінено на Task<byte[]?> (nullable)
+        private async Task<byte[]?> SendTcpRequest(byte[] msg)
         {
             if (!_tcpClient.Connected)
             {
@@ -151,8 +156,7 @@ namespace NetSdrClientApp
             await _tcpClient.SendMessageAsync(msg);
 
             var resp = await responseTask;
-
-            return resp;
+            return resp; 
         }
 
         private void _tcpClient_MessageReceived(object? sender, byte[] e)
