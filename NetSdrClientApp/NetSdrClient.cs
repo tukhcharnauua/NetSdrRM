@@ -52,7 +52,7 @@ namespace NetSdrClientApp
 
                 foreach (var msg in msgs)
                 {
-                    await SendTcpRequest(msg);
+                    await Request(msg);
                 }
             }
         }
@@ -79,7 +79,7 @@ namespace NetSdrClientApp
 
             var msg = NetSdrMessageHelper.GetControlItemMessage(MsgTypes.SetControlItem, ControlItemCodes.ReceiverState, args);
             
-            await SendTcpRequest(msg);
+            await Request(msg);
 
             IQStarted = true;
 
@@ -100,7 +100,7 @@ namespace NetSdrClientApp
 
             var msg = NetSdrMessageHelper.GetControlItemMessage(MsgTypes.SetControlItem, ControlItemCodes.ReceiverState, args);
 
-            await SendTcpRequest(msg);
+            await Request(msg);
 
             IQStarted = false;
 
@@ -137,7 +137,7 @@ namespace NetSdrClientApp
             }
         }
 
-        private async Task<byte[]> SendTcpRequest(byte[] msg)
+        private async Task<byte[]?> SendTcpRequest(byte[] msg)
         {
             if (!_tcpClient.Connected)
             {
