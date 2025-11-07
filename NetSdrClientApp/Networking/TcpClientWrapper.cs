@@ -24,6 +24,7 @@ namespace NetSdrClientApp.Networking
             _host = host;
             _port = port;
         }
+
         public void Connect()
         {
             if (Connected)
@@ -60,14 +61,14 @@ namespace NetSdrClientApp.Networking
             }
         }
 
-        // ✅ Тепер просто конвертує string -> byte[] і викликає основний метод
+        //  Тепер просто конвертує string -> byte[] і викликає основний метод
         public Task SendMessageAsync(string str)
         {
             var data = Encoding.UTF8.GetBytes(str);
             return SendMessageAsync(data);
         }
 
-        // ✅ Єдине місце з логікою відправки
+        //  Єдине місце з логікою відправки
         public async Task SendMessageAsync(byte[] data)
         {
             ValidateConnection();
@@ -91,7 +92,7 @@ namespace NetSdrClientApp.Networking
 
         private async Task SendDataAsync(byte[] data)
         {
-            // ✅ Перевіряємо на null перед використанням
+            //  Перевіряємо на null перед використанням
             if (_cts == null)
             {
                 throw new InvalidOperationException("CancellationTokenSource is not initialized.");
@@ -118,7 +119,7 @@ namespace NetSdrClientApp.Networking
 
         private async Task StartListeningAsync()
         {
-            // ✅ Додаємо явну перевірку та ранній вихід
+            //  Додаємо явну перевірку та ранній вихід
             if (!Connected || _stream == null || !_stream.CanRead || _cts == null)
             {
                 throw new InvalidOperationException("Not connected to a server or CancellationTokenSource is not initialized.");
@@ -128,7 +129,7 @@ namespace NetSdrClientApp.Networking
             {
                 Console.WriteLine($"Starting listening for incoming messages.");
                 
-                // ✅ Тепер можемо безпечно використовувати _cts без null-conditional операторів
+                //  Тепер можемо безпечно використовувати _cts без null-conditional операторів
                 while (!_cts.Token.IsCancellationRequested)
                 {
                     byte[] buffer = new byte[8194];
