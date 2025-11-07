@@ -8,7 +8,7 @@ namespace NetSdrClientAppTests
         public void Setup()
         {
         }
-
+ 
         [Test]
         public void GetControlItemMessageTest()
         {
