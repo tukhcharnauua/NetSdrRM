@@ -14,6 +14,7 @@ namespace NetSdrClientApp
 {
     public class NetSdrClient
     {
+
         
         private readonly ITcpClient _tcpClient;
         private readonly IUdpClient _udpClient;
@@ -29,7 +30,7 @@ namespace NetSdrClientApp
             _udpClient = udpClient;
 
             _tcpClient.MessageReceived += _tcpClient_MessageReceived;
-            // ПІДПИСКА на статичний метод
+            // ПІДПИСКА на статічний метод
             _udpClient.MessageReceived += _udpClient_MessageReceived; 
         }
 
@@ -127,7 +128,15 @@ namespace NetSdrClientApp
             NetSdrMessageHelper.TranslateMessage(e, out _, out _, out _, out byte[] body);
             var samples = NetSdrMessageHelper.GetSamples(16, body);
 
-            Console.WriteLine($"Samples recieved: " + body.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+            // Виправлення: перевірка чи масив не порожній перед Aggregate
+            if (body.Length > 0)
+            {
+                Console.WriteLine($"Samples recieved: " + body.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+            }
+            else
+            {
+                Console.WriteLine("Samples recieved: (empty)");
+            }
 
             
             using (FileStream fs = new FileStream("samples.bin", FileMode.Append, FileAccess.Write, FileShare.Read))
@@ -173,16 +182,9 @@ namespace NetSdrClientApp
             }
             else
             {
-                // Обробка Unsolicited messages
-                if (type == MsgTypes.Notification) 
-                {
-                    Console.WriteLine($"Unsolicited NOTIFICATION received: Code={code}.");
-                }
-                else
-                {
-                    Console.WriteLine($"Unexpected TCP message (not response, not notification) recieved: Type={type}, Code={code}. Data: " 
-                                      + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
-                }
+                // Обробка Unsolicited messages - видалено перевірку на MsgTypes.Notification
+                Console.WriteLine($"Unsolicited message received: Type={type}, Code={code}. Data: " 
+                                  + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
             }
         }
     }
