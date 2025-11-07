@@ -24,7 +24,6 @@ namespace NetSdrClientApp.Networking
             _host = host;
             _port = port;
         }
-
         public void Connect()
         {
             if (Connected)
