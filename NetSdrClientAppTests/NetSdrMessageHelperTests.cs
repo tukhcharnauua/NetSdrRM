@@ -138,7 +138,7 @@ namespace NetSdrClientAppTests
         }
 
         [Test]
-        public void TranslateMessage_ValidDataItemMessage_ReturnsTrue()
+        public  void TranslateMessage_ValidDataItemMessage_ReturnsTrue()
         {
             //Arrange
             var originalType = NetSdrMessageHelper.MsgTypes.DataItem3;
