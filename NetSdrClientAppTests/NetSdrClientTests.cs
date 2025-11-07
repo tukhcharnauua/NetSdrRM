@@ -14,7 +14,7 @@ public class NetSdrClientTests
 
     [SetUp]
     public void Setup()
-    {
+    { 
         _tcpMock = new Mock<ITcpClient>();
         _tcpMock.Setup(tcp => tcp.Connect()).Callback(() =>
         {
