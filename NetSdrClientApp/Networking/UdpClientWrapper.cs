@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -35,7 +35,7 @@ public class UdpClientWrapper : IUdpClient
                 Console.WriteLine($"Received from {result.RemoteEndPoint}");
             }
         }
-        catch (OperationCanceledException ex)
+        catch (OperationCanceledException)
         {
             //empty
         }
@@ -45,29 +45,29 @@ public class UdpClientWrapper : IUdpClient
         }
     }
 
-    private void StopInternal()
-{
-    try
+    public void StopListening()
     {
-        _cts?.Cancel();
-        _udpClient?.Close();
-        Console.WriteLine("Stopped listening for UDP messages.");
+        CleanupResources();
     }
-    catch (Exception ex)
+
+    public void Exit()
     {
-        Console.WriteLine($"Error while stopping: {ex.Message}");
+        CleanupResources();
     }
-}
-public void StopListening()
-{
-    StopInternal();
-}
 
-public void Exit()
-{
-    StopInternal();
-}
-
+    private void CleanupResources()
+    {
+        try
+        {
+            _cts?.Cancel();
+            _udpClient?.Close();
+            Console.WriteLine("Stopped listening for UDP messages.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error while stopping: {ex.Message}");
+        }
+    }
 
     public override int GetHashCode()
     {
