@@ -11,7 +11,7 @@ namespace NetSdrClientApp.Messages
         private const int MaxDataItemMessageLength = 8194;
         private const int MsgHeaderLength = 2;
         private const int MsgControlItemLength = 2;
-        private const int MsgSequenceNumberLength = 2;
+        private const int  MsgSequenceNumberLength = 2;
 
         public enum MsgTypes
         {
