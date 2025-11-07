@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 
 public class UdpClientWrapper : IUdpClient
 {
-
     private readonly IPEndPoint _localEndPoint;
     private CancellationTokenSource? _cts;
     private UdpClient? _udpClient;
@@ -19,7 +18,7 @@ public class UdpClientWrapper : IUdpClient
     {
         _localEndPoint = new IPEndPoint(IPAddress.Any, port);
     }
-
+ 
     public async Task StartListeningAsync()
     {
         _cts = new CancellationTokenSource();
