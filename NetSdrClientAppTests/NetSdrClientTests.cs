@@ -175,6 +175,8 @@ public class NetSdrClientTests
         //Arrange
         await ArrangeConnectedClient();
 
+
+        
         //act
         await _client.StartIQAsync();
         Assert.That(_client.IQStarted, Is.True);
@@ -190,6 +192,7 @@ public class NetSdrClientTests
         _updMock.Verify(udp => udp.StopListening(), Times.Once);
     }
 
+    
     // Виправлений тест: перевірка обробки UDP повідомлень з валідними даними
     [Test]
     public void UdpMessageReceivedTest()
@@ -232,3 +235,4 @@ public class NetSdrClientTests
         });
     }
 }
+   
