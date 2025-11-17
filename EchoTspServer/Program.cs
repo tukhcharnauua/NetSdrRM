@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -10,8 +10,8 @@ namespace EchoServer
     public class EchoServer
     {
         private readonly int _port;
-        private TcpListener _listener;
-        private CancellationTokenSource _cancellationTokenSource;
+        private TcpListener? _listener; // <-- Виправлення CS8618: Зроблено nullable, оскільки ініціалізується в StartAsync
+        private readonly CancellationTokenSource _cancellationTokenSource; // <-- Readonly: Виправлення SonarQube
 
         //constuctor
         public EchoServer(int port)
@@ -33,6 +33,7 @@ namespace EchoServer
                     TcpClient client = await _listener.AcceptTcpClientAsync();
                     Console.WriteLine("Client connected.");
 
+                    // Виклик статичного методу
                     _ = Task.Run(() => HandleClientAsync(client, _cancellationTokenSource.Token));
                 }
                 catch (ObjectDisposedException)
@@ -45,19 +46,22 @@ namespace EchoServer
             Console.WriteLine("Server shutdown.");
         }
 
-        private async Task HandleClientAsync(TcpClient client, CancellationToken token)
+        private static async Task HandleClientAsync(TcpClient client, CancellationToken token) // <-- Зроблено статичним (static)
         {
             using (NetworkStream stream = client.GetStream())
             {
                 try
                 {
+                    // Використовуємо масив байтів як Memory<byte>
                     byte[] buffer = new byte[8192];
+                    
+                    // Переходимо на сучасний Stream.ReadAsync(Memory<byte>, CancellationToken)
                     int bytesRead;
 
-                    while (!token.IsCancellationRequested && (bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token)) > 0)
+                    while (!token.IsCancellationRequested && (bytesRead = await stream.ReadAsync(buffer.AsMemory(), token)) > 0)
                     {
                         // Echo back the received message
-                        await stream.WriteAsync(buffer, 0, bytesRead, token);
+                        await stream.WriteAsync(buffer.AsMemory(0, bytesRead), token);
                         Console.WriteLine($"Echoed {bytesRead} bytes to the client.");
                     }
                 }
@@ -76,7 +80,8 @@ namespace EchoServer
         public void Stop()
         {
             _cancellationTokenSource.Cancel();
-            _listener.Stop();
+            // Поле _listener є nullable, тому потрібна перевірка або оператор '!'
+            _listener?.Stop(); 
             _cancellationTokenSource.Dispose();
             Console.WriteLine("Server stopped.");
         }
@@ -116,7 +121,7 @@ namespace EchoServer
         private readonly string _host;
         private readonly int _port;
         private readonly UdpClient _udpClient;
-        private Timer _timer;
+        private Timer? _timer; // <-- Зроблено nullable, оскільки ініціалізується пізніше
 
         public UdpTimedSender(string host, int port)
         {
@@ -135,7 +140,7 @@ namespace EchoServer
 
         ushort i = 0;
 
-        private void SendMessageCallback(object state)
+        private void SendMessageCallback(object? state)
         {
             try
             {
