@@ -1,8 +1,9 @@
-using NetArch.Rules;
+using NetArchTest.Rules;
 using NUnit.Framework;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+
 namespace NetSdrClientAppTests
 {
     public class ArchitectureTests
@@ -49,3 +50,5 @@ namespace NetSdrClientAppTests
             // Assert
             Assert.That(result.IsSuccessful, Is.True);
         }
+    }
+}
