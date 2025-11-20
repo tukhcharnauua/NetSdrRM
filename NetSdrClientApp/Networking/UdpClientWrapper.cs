@@ -18,7 +18,7 @@ public class UdpClientWrapper : IUdpClient
     {
         _localEndPoint = new IPEndPoint(IPAddress.Any, port);
     }
- 
+
     public async Task StartListeningAsync()
     {
         _cts = new CancellationTokenSource();
@@ -35,7 +35,7 @@ public class UdpClientWrapper : IUdpClient
                 Console.WriteLine($"Received from {result.RemoteEndPoint}");
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             //empty
         }
@@ -47,15 +47,19 @@ public class UdpClientWrapper : IUdpClient
 
     public void StopListening()
     {
-        CleanupResources();
+        try
+        {
+            _cts?.Cancel();
+            _udpClient?.Close();
+            Console.WriteLine("Stopped listening for UDP messages.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error while stopping: {ex.Message}");
+        }
     }
 
     public void Exit()
-    {
-        CleanupResources();
-    }
-
-    private void CleanupResources()
     {
         try
         {
