@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -9,11 +12,11 @@ namespace NetSdrClientApp.Networking
 {
     public class TcpClientWrapper : ITcpClient
     {
-        private readonly string _host;
-        private readonly int _port;
+        private string _host;
+        private int _port;
         private TcpClient? _tcpClient;
         private NetworkStream? _stream;
-        private CancellationTokenSource? _cts;
+        private CancellationTokenSource _cts;
 
         public bool Connected => _tcpClient != null && _tcpClient.Connected && _stream != null;
 
@@ -34,6 +37,7 @@ namespace NetSdrClientApp.Networking
             }
 
             _tcpClient = new TcpClient();
+
             try
             {
                 _cts = new CancellationTokenSource();
@@ -52,7 +56,13 @@ namespace NetSdrClientApp.Networking
         {
             if (Connected)
             {
-                CleanupResources();
+                _cts?.Cancel();
+                _stream?.Close();
+                _tcpClient?.Close();
+
+                _cts = null;
+                _tcpClient = null;
+                _stream = null;
                 Console.WriteLine("Disconnected.");
             }
             else
@@ -61,98 +71,70 @@ namespace NetSdrClientApp.Networking
             }
         }
 
-        //  Тепер просто конвертує string -> byte[] і викликає основний метод
-        public Task SendMessageAsync(string str)
-        {
-            var data = Encoding.UTF8.GetBytes(str);
-            return SendMessageAsync(data);
-        }
-
-        //  Єдине місце з логікою відправки
         public async Task SendMessageAsync(byte[] data)
         {
-            ValidateConnection();
-            LogMessageSent(data);
-            await SendDataAsync(data);
-        }
-
-        private void ValidateConnection()
-        {
-            if (!IsStreamWritable())
+            if (Connected && _stream != null && _stream.CanWrite)
+            {
+                Console.WriteLine($"Message sent: " + data.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+                await _stream.WriteAsync(data, 0, data.Length);
+            }
+            else
             {
                 throw new InvalidOperationException("Not connected to a server.");
             }
         }
 
-        private void LogMessageSent(byte[] data)
+        public async Task SendMessageAsync(string str)
         {
-            var hexString = string.Join(" ", data.Select(b => b.ToString("x2")));
-            Console.WriteLine($"Message sent: {hexString}");
-        }
-
-        private async Task SendDataAsync(byte[] data)
-        {
-            //  Перевіряємо на null перед використанням
-            if (_cts == null)
+            var data = Encoding.UTF8.GetBytes(str);
+            if (Connected && _stream != null && _stream.CanWrite)
             {
-                throw new InvalidOperationException("CancellationTokenSource is not initialized.");
+                Console.WriteLine($"Message sent: " + data.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+                await _stream.WriteAsync(data, 0, data.Length);
             }
-
-            await _stream!.WriteAsync(new ReadOnlyMemory<byte>(data), _cts.Token);
-        }
-
-        private bool IsStreamWritable()
-        {
-            return Connected && _stream != null && _stream.CanWrite;
-        }
-
-        private void CleanupResources()
-        {
-            _cts?.Cancel();
-            _cts?.Dispose();
-            _stream?.Close();
-            _tcpClient?.Close();
-            _cts = null;
-            _tcpClient = null;
-            _stream = null;
+            else
+            {
+                throw new InvalidOperationException("Not connected to a server.");
+            }
         }
 
         private async Task StartListeningAsync()
         {
-            //  Додаємо явну перевірку та ранній вихід
-            if (!Connected || _stream == null || !_stream.CanRead || _cts == null)
+            if (Connected && _stream != null && _stream.CanRead)
             {
-                throw new InvalidOperationException("Not connected to a server or CancellationTokenSource is not initialized.");
-            }
-
-            try
-            {
-                Console.WriteLine($"Starting listening for incoming messages.");
-                
-                //  Тепер можемо безпечно використовувати _cts без null-conditional операторів
-                while (!_cts.Token.IsCancellationRequested)
+                try
                 {
-                    byte[] buffer = new byte[8194];
-                    int bytesRead = await _stream.ReadAsync(new Memory<byte>(buffer), _cts.Token);
+                    Console.WriteLine($"Starting listening for incomming messages.");
 
-                    if (bytesRead > 0)
+                    while (!_cts.Token.IsCancellationRequested)
                     {
-                        MessageReceived?.Invoke(this, buffer.AsSpan(0, bytesRead).ToArray());
+                        byte[] buffer = new byte[8194];
+
+                        int bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, _cts.Token);
+                        if (bytesRead > 0)
+                        {
+                            MessageReceived?.Invoke(this, buffer.AsSpan(0, bytesRead).ToArray());
+                        }
                     }
                 }
+                catch (OperationCanceledException ex)
+                {
+                    //empty
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error in listening loop: {ex.Message}");
+                }
+                finally
+                {
+                    Console.WriteLine("Listener stopped.");
+                }
             }
-            catch (OperationCanceledException)
+            else
             {
-                // Normal cancellation, no action needed
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in listening loop: {ex.Message}");
-            }
-            finally
-            {
-                Console.WriteLine("Listener stopped.");
+                throw new InvalidOperationException("Not connected to a server.");
             }
         }
     }
+
 }
