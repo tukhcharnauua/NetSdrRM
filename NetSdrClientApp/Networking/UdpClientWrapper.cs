@@ -1,10 +1,11 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+namespace NetSdrClientApp.Networking;
 
 public class UdpClientWrapper : IUdpClient
 {
@@ -22,8 +23,6 @@ public class UdpClientWrapper : IUdpClient
     public async Task StartListeningAsync()
     {
         _cts = new CancellationTokenSource();
-        Console.WriteLine("Start listening for UDP messages...");
-
         try
         {
             _udpClient = new UdpClient(_localEndPoint);
@@ -31,41 +30,41 @@ public class UdpClientWrapper : IUdpClient
             {
                 UdpReceiveResult result = await _udpClient.ReceiveAsync(_cts.Token);
                 MessageReceived?.Invoke(this, result.Buffer);
-
-                Console.WriteLine($"Received from {result.RemoteEndPoint}");
             }
         }
-        catch (OperationCanceledException ex)
+        catch (OperationCanceledException)
         {
-            //empty
+            // Normal cancellation, no action needed
         }
-        catch (Exception ex)
+        catch (SocketException ex)
         {
-            Console.WriteLine($"Error receiving message: {ex.Message}");
+            Console.WriteLine($"Socket error: {ex.Message}");
+            throw; // Re-throw для можливості обробки в тестах
+        }
+        catch (ObjectDisposedException)
+        {
+            // Client was disposed, expected during shutdown
         }
     }
 
     public void StopListening()
     {
-        try
-        {
-            _cts?.Cancel();
-            _udpClient?.Close();
-            Console.WriteLine("Stopped listening for UDP messages.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error while stopping: {ex.Message}");
-        }
+        CleanupResources();
     }
 
     public void Exit()
     {
+        CleanupResources();
+    }
+
+    private void CleanupResources()
+    {
         try
         {
             _cts?.Cancel();
+            _cts?.Dispose();
             _udpClient?.Close();
-            Console.WriteLine("Stopped listening for UDP messages.");
+            _udpClient?.Dispose();
         }
         catch (Exception ex)
         {
@@ -73,13 +72,23 @@ public class UdpClientWrapper : IUdpClient
         }
     }
 
+    // ✅ Виправлено: порівнюємо тільки порти, бо IPAddress.Any може бути різними інстансами
+    public override bool Equals(object? obj)
+    {
+        if (obj == null || GetType() != obj.GetType())
+        {
+            return false;
+        }
+
+        var other = (UdpClientWrapper)obj;
+        return _localEndPoint.Port == other._localEndPoint.Port;
+    }
+
     public override int GetHashCode()
     {
-        var payload = $"{nameof(UdpClientWrapper)}|{_localEndPoint.Address}|{_localEndPoint.Port}";
-
-        using var md5 = MD5.Create();
-        var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(payload));
-
-        return BitConverter.ToInt32(hash, 0);
+        return HashCode.Combine(
+            nameof(UdpClientWrapper), 
+            _localEndPoint.Port
+        );
     }
 }
