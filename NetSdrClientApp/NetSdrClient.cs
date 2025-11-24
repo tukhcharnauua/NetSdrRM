@@ -10,12 +10,14 @@ using System.Threading.Tasks;
 using static NetSdrClientApp.Messages.NetSdrMessageHelper;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
+
 namespace NetSdrClientApp
 {
     public class NetSdrClient
     {
-        private ITcpClient _tcpClient;
-        private IUdpClient _udpClient;
+        
+       private readonly ITcpClient _tcpClient;
+       private readonly IUdpClient _udpClient;
 
         public bool IQStarted { get; set; }
 
@@ -66,7 +68,7 @@ namespace NetSdrClientApp
                 return;
             }
 
-;           var iqDataMode = (byte)0x80;
+            var iqDataMode = (byte)0x80;
             var start = (byte)0x02;
             var fifo16bitCaptureMode = (byte)0x01;
             var n = (byte)1;
@@ -81,6 +83,7 @@ namespace NetSdrClientApp
 
             _ = _udpClient.StartListeningAsync();
         }
+        
 
         public async Task StopIQAsync()
         {
@@ -114,26 +117,28 @@ namespace NetSdrClientApp
             await SendTcpRequest(msg);
         }
 
-        private void _udpClient_MessageReceived(object? sender, byte[] e)
+#pragma warning disable S2325 // Event handler cannot be static
+private void _udpClient_MessageReceived(object? sender, byte[] e)
+{
+    NetSdrMessageHelper.TranslateMessage(e, out _, out _, out _, out byte[] body);
+    var samples = NetSdrMessageHelper.GetSamples(16, body);
+
+    Console.WriteLine($"Samples recieved: " + body.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+
+    using (FileStream fs = new FileStream("samples.bin", FileMode.Append, FileAccess.Write, FileShare.Read))
+    using (BinaryWriter sw = new BinaryWriter(fs))
+    {
+        foreach (var sample in samples)
         {
-            NetSdrMessageHelper.TranslateMessage(e, out MsgTypes type, out ControlItemCodes code, out ushort sequenceNum, out byte[] body);
-            var samples = NetSdrMessageHelper.GetSamples(16, body);
-
-            Console.WriteLine($"Samples recieved: " + body.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
-
-            using (FileStream fs = new FileStream("samples.bin", FileMode.Append, FileAccess.Write, FileShare.Read))
-            using (BinaryWriter sw = new BinaryWriter(fs))
-            {
-                foreach (var sample in samples)
-                {
-                    sw.Write((short)sample); //write 16 bit per sample as configured 
-                }
-            }
+            sw.Write((short)sample); //write 16 bit per sample as configured 
         }
+    }
+}
+#pragma warning restore S2325
 
-        private TaskCompletionSource<byte[]> responseTaskSource;
+        private TaskCompletionSource<byte[]>? responseTaskSource;
 
-        private async Task<byte[]> SendTcpRequest(byte[] msg)
+        private async Task<byte[]?> SendTcpRequest(byte[] msg)
         {
             if (!_tcpClient.Connected)
             {
@@ -153,7 +158,7 @@ namespace NetSdrClientApp
 
         private void _tcpClient_MessageReceived(object? sender, byte[] e)
         {
-            //TODO: add Unsolicited messages handling here
+            
             if (responseTaskSource != null)
             {
                 responseTaskSource.SetResult(e);
@@ -162,4 +167,4 @@ namespace NetSdrClientApp
             Console.WriteLine("Response recieved: " + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
         }
     }
-}
+} 
