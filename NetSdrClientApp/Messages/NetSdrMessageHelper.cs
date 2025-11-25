@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Buffers.Binary; // Рекомендую для роботи з бітами, але тут лишив BitConverter для сумісності
 using System.Linq; // Більше не потрібен для парсингу, але лишив, якщо десь ще треба

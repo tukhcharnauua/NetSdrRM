@@ -8,20 +8,18 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using static NetSdrClientApp.Messages.NetSdrMessageHelper;
-using System.IO; 
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
 
 namespace NetSdrClientApp
 {
     public class NetSdrClient
     {
         
-        private readonly ITcpClient _tcpClient;
-        private readonly IUdpClient _udpClient;
-        
-        public bool IQStarted { get; set; }
+       private readonly ITcpClient _tcpClient;
+       private readonly IUdpClient _udpClient;
 
-    
-        private TaskCompletionSource<byte[]>? responseTaskSource; 
+        public bool IQStarted { get; set; }
 
         public NetSdrClient(ITcpClient tcpClient, IUdpClient udpClient)
         {
@@ -29,8 +27,7 @@ namespace NetSdrClientApp
             _udpClient = udpClient;
 
             _tcpClient.MessageReceived += _tcpClient_MessageReceived;
-            // ПІДПИСКА на статичний метод
-            _udpClient.MessageReceived += _udpClient_MessageReceived; 
+            _udpClient.MessageReceived += _udpClient_MessageReceived;
         }
 
         public async Task ConnectAsync()
@@ -43,7 +40,7 @@ namespace NetSdrClientApp
                 var automaticFilterMode = BitConverter.GetBytes((ushort)0).ToArray();
                 var adMode = new byte[] { 0x00, 0x03 };
 
-
+                //Host pre setup
                 var msgs = new List<byte[]>
                 {
                     NetSdrMessageHelper.GetControlItemMessage(MsgTypes.SetControlItem, ControlItemCodes.IQOutputDataSampleRate, sampleRate),
@@ -86,6 +83,7 @@ namespace NetSdrClientApp
 
             _ = _udpClient.StartListeningAsync();
         }
+        
 
         public async Task StopIQAsync()
         {
@@ -119,35 +117,33 @@ namespace NetSdrClientApp
             await SendTcpRequest(msg);
         }
 
-        // Придушення попередження S2325: цей метод має бути нестатичним, оскільки це обробник події екземпляра
-        #pragma warning disable S2325 
-        private void _udpClient_MessageReceived(object? sender, byte[] e)
+#pragma warning disable S2325 // Event handler cannot be static
+private void _udpClient_MessageReceived(object? sender, byte[] e)
+{
+    NetSdrMessageHelper.TranslateMessage(e, out _, out _, out _, out byte[] body);
+    var samples = NetSdrMessageHelper.GetSamples(16, body);
+
+    Console.WriteLine($"Samples recieved: " + body.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+
+    using (FileStream fs = new FileStream("samples.bin", FileMode.Append, FileAccess.Write, FileShare.Read))
+    using (BinaryWriter sw = new BinaryWriter(fs))
+    {
+        foreach (var sample in samples)
         {
-            #pragma warning restore S2325 
-            NetSdrMessageHelper.TranslateMessage(e, out _, out _, out _, out byte[] body);
-            var samples = NetSdrMessageHelper.GetSamples(16, body);
-
-            Console.WriteLine($"Samples recieved: " + body.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
-
-            
-            using (FileStream fs = new FileStream("samples.bin", FileMode.Append, FileAccess.Write, FileShare.Read))
-            using (BinaryWriter sw = new BinaryWriter(fs))
-            {
-                foreach (var sample in samples)
-                {
-                    sw.Write((short)sample); //write 16 bit per sample as configured 
-                }
-            }
+            sw.Write((short)sample); //write 16 bit per sample as configured 
         }
+    }
+}
+#pragma warning restore S2325
 
-        // Залишаю сигнатуру Task<byte[]> без '?' для усунення помилки повернення null
-        private async Task<byte[]> SendTcpRequest(byte[] msg)
+        private TaskCompletionSource<byte[]>? responseTaskSource;
+
+        private async Task<byte[]?> SendTcpRequest(byte[] msg)
         {
             if (!_tcpClient.Connected)
             {
                 Console.WriteLine("No active connection.");
-                // Виправлення проблеми з null: викидаємо виняток
-                throw new InvalidOperationException("TCP client is not connected."); 
+                return null;
             }
 
             responseTaskSource = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -157,33 +153,18 @@ namespace NetSdrClientApp
 
             var resp = await responseTask;
 
-            // resp гарантовано не null
             return resp;
         }
 
         private void _tcpClient_MessageReceived(object? sender, byte[] e)
         {
-            NetSdrMessageHelper.TranslateMessage(e, out MsgTypes type, out ControlItemCodes code, out _, out _);
             
             if (responseTaskSource != null)
             {
                 responseTaskSource.SetResult(e);
-                responseTaskSource = null; // Скидаємо очікування
-                Console.WriteLine("Response recieved: " + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+                responseTaskSource = null;
             }
-            else
-            {
-                // Обробка Unsolicited messages
-                if (type == MsgTypes.Notification) 
-                {
-                    Console.WriteLine($"Unsolicited NOTIFICATION received: Code={code}.");
-                }
-                else
-                {
-                    Console.WriteLine($"Unexpected TCP message (not response, not notification) recieved: Type={type}, Code={code}. Data: " 
-                                      + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
-                }
-            }
+            Console.WriteLine("Response recieved: " + e.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
         }
     }
-}
+} 

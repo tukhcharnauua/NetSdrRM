@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,8 +24,6 @@ namespace NetSdrClientApp.Networking
         public async Task StartListeningAsync()
     {
         _cts = new CancellationTokenSource();
-        Console.WriteLine("Start listening for UDP messages...");
-
         try
         {
             _udpClient = new UdpClient(_localEndPoint);
@@ -34,41 +31,41 @@ namespace NetSdrClientApp.Networking
             {
                 UdpReceiveResult result = await _udpClient.ReceiveAsync(_cts.Token);
                 MessageReceived?.Invoke(this, result.Buffer);
-
-                Console.WriteLine($"Received from {result.RemoteEndPoint}");
             }
         }
-        catch (OperationCanceledException ex)
+        catch (OperationCanceledException)
         {
-            //empty
+            // Normal cancellation, no action needed
         }
-        catch (Exception ex)
+        catch (SocketException ex)
         {
-            Console.WriteLine($"Error receiving message: {ex.Message}");
+            Console.WriteLine($"Socket error: {ex.Message}");
+            throw; // Re-throw для можливості обробки в тестах
+        }
+        catch (ObjectDisposedException)
+        {
+            // Client was disposed, expected during shutdown
         }
     }
 
     public void StopListening()
     {
-        try
-        {
-            _cts?.Cancel();
-            _udpClient?.Close();
-            Console.WriteLine("Stopped listening for UDP messages.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error while stopping: {ex.Message}");
-        }
+        CleanupResources();
     }
 
     public void Exit()
     {
+        CleanupResources();
+    }
+
+    private void CleanupResources()
+    {
         try
         {
             _cts?.Cancel();
+            _cts?.Dispose();
             _udpClient?.Close();
-            Console.WriteLine("Stopped listening for UDP messages.");
+            _udpClient?.Dispose();
         }
         catch (Exception ex)
         {

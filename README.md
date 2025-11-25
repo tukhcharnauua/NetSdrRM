@@ -1,16 +1,16 @@
 # Лабораторні з реінжинірингу (8×)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrClient&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrClient)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrClient&metric=coverage)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrClient)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrClient&metric=bugs)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrClient)
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrClient&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrClient)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrClient&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrClient)
-[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrClient&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrClient)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrClient&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrClient)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrClient&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrClient)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrRM&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrRM)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrRM&metric=coverage)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrRM)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrRM&metric=bugs)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrRM)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrRM&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrRM)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrRM&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrRM)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrRM&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrRM)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrRM&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrRM)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=tukhcharnauua_NetSdrRM&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=tukhcharnauua_NetSdrRM)
 
 
 Цей репозиторій використовується для курсу **реінжиніринг ПЗ**. 
-Мета — провести комплексний реінжиніринг спадкового коду NetSdrClient, включаючи рефакторинг архітектури, покращення якості коду, впровадження сучасних практик розробки та автоматизацію процесів контролю якості через CI/CD пайплайни.
+Мета — провести комплексний реінжиніринг спадкового коду NetSdrRM, включаючи рефакторинг архітектури, покращення якості коду, впровадження сучасних практик розробки та автоматизацію процесів контролю якості через CI/CD пайплайни.
 
 ---
 
@@ -102,12 +102,12 @@ jobs:
         shell: pwsh
       # 2) BUILD & TEST
       - name: Restore
-        run: dotnet restore NetSdrClient.sln
+        run: dotnet restore NetSdrRM.sln
       - name: Build
-        run: dotnet build NetSdrClient.sln -c Release --no-restore
+        run: dotnet build NetSdrRM.sln -c Release --no-restore
       #- name: Tests with coverage (OpenCover)
       #  run: |
-      #    dotnet test NetSdrClientAppTests/NetSdrClientAppTests.csproj -c Release --no-build `
+      #    dotnet test NetSdrRMAppTests/NetSdrRMAppTests.csproj -c Release --no-build `
       #      /p:CollectCoverage=true `
       #      /p:CoverletOutput=TestResults/coverage.xml `
       #      /p:CoverletOutputFormat=opencover
@@ -130,7 +130,7 @@ jobs:
 **Мета:** виправити **5–10** зауважень Sonar (bugs/smells) без зміни поведінки.
 
 **Кроки:**
-- Дрібними комітами виправити знайдені Sonar-проблеми у `NetSdrClientApp`.
+- Дрібними комітами виправити знайдені Sonar-проблеми у `NetSdrRMApp`.
 
 **Здати:** PR із “зеленими” required checks; скріни змін метрик у Sonar.
 
@@ -144,15 +144,15 @@ jobs:
 - Підключити генерацію покриття:
   - `coverlet.msbuild`:
     ```bash
-    dotnet add NetSdrClientAppTests package coverlet.msbuild
-    dotnet add NetSdrClientAppTests package Microsoft.NET.Test.Sdk
-    dotnet test NetSdrClientAppTests -c Release       /p:CollectCoverage=true       /p:CoverletOutput=TestResults/coverage.xml       /p:CoverletOutputFormat=opencover
+    dotnet add NetSdrRMAppTests package coverlet.msbuild
+    dotnet add NetSdrRMAppTests package Microsoft.NET.Test.Sdk
+    dotnet test NetSdrRMAppTests -c Release       /p:CollectCoverage=true       /p:CoverletOutput=TestResults/coverage.xml       /p:CoverletOutputFormat=opencover
     ```
 - У Sonar додати крок запуску тестів:
   ```
   - name: Tests with coverage (OpenCover)
     run: |
-      dotnet test NetSdrClientAppTests/NetSdrClientAppTests.csproj -c Release --no-build `
+      dotnet test NetSdrRMAppTests/NetSdrRMAppTests.csproj -c Release --no-build `
         /p:CollectCoverage=true `
         /p:CoverletOutput=TestResults/coverage.xml `
         /p:CoverletOutputFormat=opencover
@@ -207,7 +207,7 @@ jobs:
 **Мета:**навчитись виявляти й виправляти уразливі залежності, користуватись інструментами GitHub Security (Dependency graph, Dependabot alerts/updates).
 
 **Кроки:**
-- `dotnet list NetSdrClient.sln package --outdated --include-transitive`
+- `dotnet list NetSdrRM.sln package --outdated --include-transitive`
 - Увімкнути GitHub Security
   - Repo → Settings → Code security and analysis → включи Dependency graph + Dependabot alerts.
   - Через кілька хвилин GitHub має показати алерт про Newtonsoft.Json.
