@@ -6,20 +6,23 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-public class UdpClientWrapper : IUdpClient
+
+namespace NetSdrClientApp.Networking
 {
-    private readonly IPEndPoint _localEndPoint;
-    private CancellationTokenSource? _cts;
-    private UdpClient? _udpClient;
-
-    public event EventHandler<byte[]>? MessageReceived;
-
-    public UdpClientWrapper(int port)
+    
+    public class UdpClientWrapper : IUdpClient
     {
-        _localEndPoint = new IPEndPoint(IPAddress.Any, port);
-    }
+        private readonly IPEndPoint _localEndPoint;
+        private CancellationTokenSource? _cts;
+        private UdpClient? _udpClient;
 
-    public async Task StartListeningAsync()
+        public event EventHandler<byte[]>? MessageReceived;
+
+        public UdpClientWrapper(int port)
+        {
+            _localEndPoint = new IPEndPoint(IPAddress.Any, port);
+        }
+        public async Task StartListeningAsync()
     {
         _cts = new CancellationTokenSource();
         Console.WriteLine("Start listening for UDP messages...");
@@ -73,13 +76,15 @@ public class UdpClientWrapper : IUdpClient
         }
     }
 
-    public override int GetHashCode()
-    {
-        var payload = $"{nameof(UdpClientWrapper)}|{_localEndPoint.Address}|{_localEndPoint.Port}";
+        public override int GetHashCode()
+        {
+            var payload = $"{nameof(UdpClientWrapper)}|{_localEndPoint.Address}|{_localEndPoint.Port}";
 
-        using var md5 = MD5.Create();
-        var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(payload));
+            using var md5 = MD5.Create();
+            var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(payload));
 
-        return BitConverter.ToInt32(hash, 0);
+            return BitConverter.ToInt32(hash, 0);
+        }
     }
+    
 }
