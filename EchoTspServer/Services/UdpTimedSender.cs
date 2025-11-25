@@ -49,7 +49,8 @@ namespace EchoServer.Services
                     .Concat(BitConverter.GetBytes(_counter))
                     .Concat(samples)
                     .ToArray();
-                    
+
+                        
                 var endpoint = new IPEndPoint(IPAddress.Parse(_host), _port);
                 _udpClient.Send(msg, msg.Length, endpoint);
                 _logger.Log($"Message sent to {_host}:{_port}");
