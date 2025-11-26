@@ -2,13 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Buffers.Binary; // Рекомендую для роботи з бітами, але тут лишив BitConverter для сумісності
 using System.Linq; // Більше не потрібен для парсингу, але лишив, якщо десь ще треба
-
+using System.Diagnostics.CodeAnalysis;
 namespace NetSdrClientApp.Messages
 {
+
     /// <summary>
     /// Хелпер для роботи з повідомленнями протоколу SDR.
     /// Працює з байтами напряму через Span для максимальної швидкодії.
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public static class NetSdrMessageHelper
     {
         // Константи замість Magic Numbers
