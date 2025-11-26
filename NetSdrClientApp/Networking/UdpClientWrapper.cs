@@ -87,10 +87,11 @@ namespace NetSdrClientApp.Networking
 
         public override int GetHashCode()
         {
+            // Використовуємо SHA256 замість MD5, щоб Сонар не лаявся на безпеку
             var payload = $"{nameof(UdpClientWrapper)}|{_localEndPoint.Address}|{_localEndPoint.Port}";
 
-            using var md5 = MD5.Create();
-            var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(payload));
+            using var sha = SHA256.Create();
+            var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(payload));
 
             return BitConverter.ToInt32(hash, 0);
         }
