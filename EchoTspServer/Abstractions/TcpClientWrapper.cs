@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Sockets;
 
 namespace EchoServer.Abstractions
 {
+    [ExcludeFromCodeCoverage]
     public class TcpClientWrapper : ITcpClientWrapper
     {
         private readonly TcpClient _client;

@@ -2,9 +2,10 @@ using System;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-
+using System.Diagnostics.CodeAnalysis;
 namespace EchoServer.Abstractions
 {
+    [ExcludeFromCodeCoverage]
     public class NetworkStreamWrapper : INetworkStreamWrapper
     {
         private readonly NetworkStream _stream;
