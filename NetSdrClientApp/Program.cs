@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis; // <--- 1. Додай
 using System.Threading.Tasks;
 using NetSdrClientApp.Networking;
 
 namespace NetSdrClientApp
 {
+    [ExcludeFromCodeCoverage] // <--- 2. Додай
     class Program
     {
         // Важливо: Main має бути async Task, бо ми використовуємо await

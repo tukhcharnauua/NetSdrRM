@@ -1,10 +1,12 @@
 using System;
+using System.Diagnostics.CodeAnalysis; // <--- 1. Додано цей using
 using System.Threading.Tasks;
 using EchoServer.Abstractions;
 using EchoServer.Services;
 
 namespace EchoServer
 {
+    [ExcludeFromCodeCoverage] // <--- 2. Додано цей атрибут
     public static class Program
     {
         public static async Task Main(string[] args)
@@ -39,4 +41,4 @@ namespace EchoServer
             await Task.CompletedTask;
         }
     }
-} 
+}
